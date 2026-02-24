@@ -1,7 +1,7 @@
-const _$ = (strings: TemplateStringsArray, ...values: any[]) =>
+const _$ = (strings: TemplateStringsArray, ...values: unknown[]) =>
 	dedent(strings, ...values);
 
-function dedent(strings: TemplateStringsArray, ...values: any[]) {
+function dedent(strings: TemplateStringsArray, ...values: unknown[]) {
 	let result = "";
 	for (let i = 0; i < strings.length; i++) {
 		result += strings[i];
@@ -25,12 +25,12 @@ function dedent(strings: TemplateStringsArray, ...values: any[]) {
 		line.trim().length > 0 ? line.slice(minIndent) : line,
 	);
 
-	while (dedented.length > 0 && dedented[0].trim().length === 0) {
+	while (dedented.length > 0 && dedented[0]?.trim().length === 0) {
 		dedented.shift();
 	}
 	while (
 		dedented.length > 0 &&
-		dedented[dedented.length - 1].trim().length === 0
+		dedented[dedented.length - 1]?.trim().length === 0
 	) {
 		dedented.pop();
 	}
