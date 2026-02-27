@@ -1,4 +1,4 @@
-import type { SQL } from "./_constant";
+import type { SQL } from "../proxies/sqlite";
 import { Property } from "./property";
 
 const integer = new Property<"integer", bigint | string | SQL, unknown>(
