@@ -1,13 +1,15 @@
 import * as Primitive from "./primitive";
 import type { PropertyBuilder } from "./property";
 
-const field = (): FieldBuilder => ({
+const Field = (): FieldBuilder => ({
 	integer: integerField,
 	real: realField,
 	text: textField,
 	blob: blobField,
 	enum: enumField,
 });
+
+const field = Field();
 
 const integerField = (name: string, config?: unknown) =>
 	Primitive.integer.metadata(name, config);
@@ -30,4 +32,4 @@ interface FieldBuilder {
 	enum: PropertyBuilder<"enum", bigint, { options: Record<string, number> }>;
 }
 
-export { field, type FieldBuilder };
+export { field, Field, type FieldBuilder };
