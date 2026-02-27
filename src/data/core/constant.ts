@@ -1,7 +1,5 @@
 import { sql } from "../proxies/sqlite";
 
-const BUILD_TARGET = process.env["BUILD_TARGET"];
-
 const SqlValue = () => ({
 	now: sql`CURRENT_TIMESTAMP`,
 });
@@ -15,6 +13,9 @@ const sqlConstant = () => ({
 const constant = () => ({
 	now: "now",
 });
+
+// @ts-ignore
+const BUILD_TARGET = process.env.BUILD_TARGET;
 
 const Constant = () =>
 	(BUILD_TARGET === "SQLite" && sqlConstant()) || constant();
