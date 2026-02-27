@@ -3,7 +3,7 @@ import { field, Schema, Table, value } from "../core";
 
 const artefact: SchemaBuilder = () => ({
 	name: field.text("name"),
-	timestamp: field.integer("timestamp").default(value.now()),
+	timestamp: field.integer("timestamp").default(value.now),
 });
 
 const artefactSchema = Schema("Artefact", artefact);
