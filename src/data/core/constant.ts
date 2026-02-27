@@ -16,6 +16,7 @@ const constant = () => ({
 	now: "now()",
 });
 
-const Constant = () => (BUILD_TARGET === "SQLite" && sqlConstant()) || constant();
+const Constant = () =>
+	(BUILD_TARGET === "SQLite" && sqlConstant()) || constant();
 
 export { Constant };

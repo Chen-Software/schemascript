@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { _$ } from "@/utils/dedent";
-import { artefactSchema, artefactTable } from "./artefact.schema";
+import { artefactSchema, artefactTable } from "./artefact";
 
 describe("Artefact Schema", () => {
 	test("should output the correct schema representation", () => {
