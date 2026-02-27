@@ -1,22 +1,22 @@
-use crate::onnx_engine::{OnnxEngine, OnnxPayload};
+use crate::chat::ChatManager;
 use crate::{AsyncDatabase, QueryPayload};
-use rquickjs::{Context, Function, Runtime};
+use rquickjs::{Context, Function, Object, Runtime};
 use std::sync::Arc;
 
 pub struct JsHost {
     runtime: Runtime,
     context: Context,
     db: Arc<AsyncDatabase>,
-    onnx: Arc<OnnxEngine>,
+    chat: Arc<ChatManager>,
 }
 
 impl JsHost {
-    pub fn new(db: Arc<AsyncDatabase>, onnx: Arc<OnnxEngine>) -> anyhow::Result<Self> {
+    pub fn new(db: Arc<AsyncDatabase>, chat: Arc<ChatManager>) -> anyhow::Result<Self> {
         let runtime = Runtime::new()?;
         let context = Context::full(&runtime)?;
 
         let db_clone = db.clone();
-        let onnx_clone = onnx.clone();
+        let chat_clone = chat.clone();
 
         context.with(|ctx| {
             let globals = ctx.globals();
@@ -36,20 +36,22 @@ impl JsHost {
 
             globals.set("__host_sqlite_call", host_call)?;
 
-            let onnx_call = Function::new(ctx.clone(), move |payload_str: String| -> String {
-                let payload: OnnxPayload = match serde_json::from_str(&payload_str) {
-                    Ok(p) => p,
-                    Err(e) => return format!("{{\"error\": \"Invalid ONNX payload: {}\"}}", e),
-                };
-                match onnx_clone.execute(payload) {
-                    Ok(result) => serde_json::to_string(&result).unwrap_or_else(|e| {
-                        format!("{{\"error\": \"Serialisation error: {}\"}}", e)
-                    }),
-                    Err(e) => format!("{{\"error\": \"ONNX error: {}\"}}", e),
-                }
-            })?;
+            let chat_obj = Object::new(ctx.clone())?;
+            let chat_manager = chat_clone.clone();
+            chat_obj.set(
+                "sendMessage",
+                Function::new(
+                    ctx.clone(),
+                    move |content: String, session_id: Option<String>| -> String {
+                        match chat_manager.send_message(content, session_id) {
+                            Ok(res) => res,
+                            Err(e) => format!("Error: {}", e),
+                        }
+                    },
+                )?,
+            )?;
 
-            globals.set("__host_onnx_call", onnx_call)?;
+            globals.set("chat", chat_obj)?;
 
             Ok::<(), anyhow::Error>(())
         })?;
@@ -58,7 +60,7 @@ impl JsHost {
             runtime,
             context,
             db,
-            onnx,
+            chat,
         })
     }
 

@@ -1,4 +1,5 @@
 pub mod async_database;
+pub mod chat;
 pub mod js_host;
 pub mod onnx_engine;
 pub mod types;

@@ -17,8 +17,10 @@ smol = "2.0"
 base64 = "0.22"
 lru = "0.12"
 async-trait = "0.1"
-ort = "2.0.0-rc.11"
-ndarray = "0.17"
+ort = { version = "2.0.0-rc.9", features = ["ndarray", "cuda", "coreml", "directml"] }
+tokenizers = "0.19"
+ndarray = "0.15"
+sysinfo = "0.30"
 
 wasmedge-sdk = { version = "0.13", optional = true }
 wasmedge-types = { version = "0.4", optional = true }

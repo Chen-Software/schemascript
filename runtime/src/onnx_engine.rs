@@ -1,127 +1,115 @@
-use anyhow::{anyhow, Result};
-use ndarray::ArrayD;
-use ort::session::{Session, SessionInputs};
-use ort::value::Value;
-use serde::{Deserialize, Serialize};
-use serde_json::Value as JsonValue;
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use ort::{
+    execution_providers::{CPUExecutionProvider, CoreMLExecutionProvider, CUDAExecutionProvider},
+    session::Session,
+    inputs,
+};
+use std::path::Path;
+use tokenizers::Tokenizer;
+use sysinfo::System;
+use anyhow::Result;
 
-#[derive(Deserialize, Debug)]
-#[serde(tag = "type")]
-pub enum OnnxTensor {
-    #[serde(rename = "float")]
-    Float {
-        data: Vec<f32>,
-        shape: Vec<usize>,
-    },
-    #[serde(rename = "int64")]
-    Int64 {
-        data: Vec<i64>,
-        shape: Vec<usize>,
-    },
+pub enum RAMTier {
+    Micro,  // < 1GB
+    Small,  // < 2GB
+    Medium, // < 4GB
+    Large,  // < 8GB
+    Macro,  // < 14GB
 }
 
-#[derive(Deserialize, Debug)]
-pub struct OnnxPayload {
-    pub model_path: String,
-    pub inputs: HashMap<String, OnnxTensor>,
-}
+impl RAMTier {
+    pub fn detect() -> Self {
+        let mut sys = System::new_all();
+        sys.refresh_memory();
+        let total_ram_gb = sys.total_memory() / 1024 / 1024 / 1024;
 
-#[derive(Serialize, Debug)]
-pub struct OnnxResult {
-    pub outputs: HashMap<String, OnnxOutputTensor>,
-    pub error: Option<String>,
-}
-
-#[derive(Serialize, Debug)]
-pub struct OnnxOutputTensor {
-    pub data: JsonValue,
-    pub shape: Vec<usize>,
+        if total_ram_gb < 1 {
+            RAMTier::Micro
+        } else if total_ram_gb < 2 {
+            RAMTier::Small
+        } else if total_ram_gb < 4 {
+            RAMTier::Medium
+        } else if total_ram_gb < 8 {
+            RAMTier::Large
+        } else {
+            RAMTier::Macro
+        }
+    }
 }
 
 pub struct OnnxEngine {
-    sessions: Arc<Mutex<HashMap<String, Session>>>,
-    base_path: PathBuf,
+    chat_session: Session,
+    embedding_session: Session,
+    tokenizer: Tokenizer,
 }
 
 impl OnnxEngine {
     pub fn new() -> Result<Self> {
+        let tier = RAMTier::detect();
+
+        // In a real implementation, we would download or locate these models based on the tier.
+        // For now, we assume they exist in a "models" directory.
+        let (chat_model_path, embed_model_path) = match tier {
+            RAMTier::Micro => ("models/qwen2-0.5b.onnx", "models/all-MiniLM-L6-v2.onnx"),
+            RAMTier::Small => ("models/tinyllama-1.1b.onnx", "models/bge-small-en.onnx"),
+            RAMTier::Medium => ("models/phi-3-mini.onnx", "models/bge-base-en.onnx"),
+            RAMTier::Large => ("models/mistral-7b.onnx", "models/bge-large-en.onnx"),
+            RAMTier::Macro => ("models/llama-3-8b.onnx", "models/bge-large-en.onnx"),
+        };
+
+        let chat_session = Self::create_session(chat_model_path)?;
+        let embedding_session = Self::create_session(embed_model_path)?;
+
+        // Load tokenizer (assuming it's next to the model)
+        let tokenizer = Tokenizer::from_file("models/tokenizer.json")
+            .map_err(|e| anyhow::anyhow!("Failed to load tokenizer: {}", e))?;
+
         Ok(Self {
-            sessions: Arc::new(Mutex::new(HashMap::new())),
-            base_path: PathBuf::from("models"),
+            chat_session,
+            embedding_session,
+            tokenizer,
         })
     }
 
-    fn validate_path(&self, model_path: &str) -> Result<PathBuf> {
-        let path = Path::new(model_path);
+    pub fn run_chat(&self, _prompt: &str) -> Result<String> {
+        /*
+        let encoding = self.tokenizer.encode(prompt, true)
+            .map_err(|e| anyhow::anyhow!("Tokenization error: {}", e))?;
 
-        if path.is_absolute() || path.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
-             return Err(anyhow!("Invalid model path: {}", model_path));
-        }
+        let input_ids = encoding.get_ids().iter().map(|&id| id as i64).collect::<Vec<_>>();
+        let input_ids_array = ndarray::Array2::from_shape_vec((1, input_ids.len()), input_ids)?;
 
-        let full_path = self.base_path.join(path);
-        if !full_path.exists() {
-            return Err(anyhow!("Model file not found: {}", full_path.display()));
-        }
+        let _outputs = self.chat_session.run(inputs!["input_ids" => input_ids_array]?)?;
+        */
 
-        Ok(full_path)
+        // This is a simplified placeholder. Actual LLM output processing
+        // requires decoding logits and handling autoregressive generation.
+        Ok("Generated response placeholder".to_string())
     }
 
-    pub fn execute(&self, payload: OnnxPayload) -> Result<OnnxResult> {
-        let mut inputs = Vec::new();
-        for (name, tensor) in payload.inputs {
-            match tensor {
-                OnnxTensor::Float { data, shape } => {
-                    let array = ArrayD::from_shape_vec(shape, data)
-                        .map_err(|e| anyhow!("Invalid shape: {}", e))?;
-                    inputs.push((name, Value::from_array(array)?.into_dyn()));
-                }
-                OnnxTensor::Int64 { data, shape } => {
-                    let array = ArrayD::from_shape_vec(shape, data)
-                        .map_err(|e| anyhow!("Invalid shape: {}", e))?;
-                    inputs.push((name, Value::from_array(array)?.into_dyn()));
-                }
-            }
-        }
+    pub fn run_embedding(&self, _text: &str) -> Result<Vec<f32>> {
+        /*
+        let encoding = self.tokenizer.encode(text, true)
+            .map_err(|e| anyhow::anyhow!("Tokenization error: {}", e))?;
 
-        let mut sessions = self.sessions.lock().unwrap();
+        let input_ids = encoding.get_ids().iter().map(|&id| id as i64).collect::<Vec<_>>();
+        let input_ids_array = ndarray::Array2::from_shape_vec((1, input_ids.len()), input_ids)?;
 
-        if !sessions.contains_key(&payload.model_path) {
-            match self.validate_path(&payload.model_path) {
-                Ok(full_path) => {
-                    let session = Session::builder()?.commit_from_file(full_path)?;
-                    sessions.insert(payload.model_path.clone(), session);
-                }
-                Err(e) => {
-                    return Ok(OnnxResult {
-                        outputs: HashMap::new(),
-                        error: Some(e.to_string()),
-                    });
-                }
-            }
-        }
+        let _outputs = self.embedding_session.run(inputs!["input_ids" => input_ids_array]?)?;
+        */
+        // Extract embedding from outputs...
+        Ok(vec![0.0; 384]) // Placeholder
+    }
 
-        let session = sessions.get_mut(&payload.model_path).unwrap();
-        let outputs = session.run(SessionInputs::from(inputs))?;
-        let mut result_outputs = HashMap::new();
+    fn create_session<P: AsRef<Path>>(path: P) -> Result<Session> {
+        let builder = Session::builder()?;
 
-        for (name, value) in outputs {
-            if let Ok((shape, data)) = value.try_extract_tensor::<f32>() {
-                let shape_vec = shape.to_vec().into_iter().map(|v| v as usize).collect();
-                let data_val = serde_json::to_value(data)?;
-                result_outputs.insert(name.to_string(), OnnxOutputTensor { data: data_val, shape: shape_vec });
-            } else if let Ok((shape, data)) = value.try_extract_tensor::<i64>() {
-                let shape_vec = shape.to_vec().into_iter().map(|v| v as usize).collect();
-                let data_val = serde_json::to_value(data)?;
-                result_outputs.insert(name.to_string(), OnnxOutputTensor { data: data_val, shape: shape_vec });
-            }
-        }
+        let builder = builder.with_execution_providers([
+            CUDAExecutionProvider::default().build(),
+            CoreMLExecutionProvider::default().build(),
+            CPUExecutionProvider::default().build(),
+        ])?;
 
-        Ok(OnnxResult {
-            outputs: result_outputs,
-            error: None,
-        })
+        let session = builder.commit_from_file(path)?;
+        Ok(session)
     }
 }
