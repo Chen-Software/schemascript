@@ -48,7 +48,11 @@ const artefact: SchemaBuilder = () => ({
 	 * @type INTEGER.Timestamp
 	 * @derived
 	 */
-	modifiedAt: field.integer("modified_at", { mode: "timestamp" }).deriveFrom().default(value.now),
+	modifiedAt: field.integer("modified_at", { mode: "timestamp" }).deriveFrom({
+		schemas: [commit],
+		joinOn: (o, u) => `${o}.digest = ${u}.digest`,
+		sql: (o, u) => `${u}.committer.date`,
+	}).default(value.now),
 
 	/**
 	 * The creation timestamp of the artefact. 
@@ -58,7 +62,11 @@ const artefact: SchemaBuilder = () => ({
 	 * @type INTEGER.Timestamp
 	 * @derived
 	 */
-	createdAt: field.integer("created_at", { mode: "timestamp" }).default(value.now),
+	createdAt: field.integer("created_at", { mode: "timestamp" }).deriveFrom({
+		schemas: [commit],
+		joinOn: (o, u) => `${o}.digest = ${u}.digest`,
+		sql: (o, u) => `${u}.author.date`,
+	}).default(value.now),
 });
 
 const artefactSchema = Schema("Artefact", artefact);
