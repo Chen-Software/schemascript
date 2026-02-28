@@ -1,0 +1,76 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "45fc9ec6-e594-488b-b184-8d4cc0781916",
+  "prevId": "3e63e8a3-d39d-46bf-a93a-ae40766b3050",
+  "tables": {
+    "artefacts": {
+      "name": "artefacts",
+      "columns": {
+        "pathname": {
+          "name": "pathname",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "digest": {
+          "name": "digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "modified_at": {
+          "name": "modified_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'now'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'now'"
+        }
+      },
+      "indexes": {
+        "artefacts_pathname_unique": {
+          "name": "artefacts_pathname_unique",
+          "columns": [
+            "pathname"
+          ],
+          "isUnique": true
+        },
+        "artefacts_digest_unique": {
+          "name": "artefacts_digest_unique",
+          "columns": [
+            "digest"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {
+      "\"artefacts\".\"name\"": "\"artefacts\".\"pathname\"",
+      "\"artefacts\".\"timestamp\"": "\"artefacts\".\"created_at\""
+    }
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1772227613407,
+      "tag": "0000_bumpy_fabian_cortez",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1772263893091,
+      "tag": "0001_kind_adam_destine",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1772267282337,
+      "tag": "0002_even_otto_octavius",
+      "breakpoints": true
+    }
+  ]
+}
