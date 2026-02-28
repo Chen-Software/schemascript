@@ -39,12 +39,14 @@ const Users = Schema("users", (prop) => ({
 
 ### Data Types
 
-SchemaScript provides 4 core primitive data types:
+SchemaScript provides 6 core primitive data types:
 
-- `integer` - For integer values and timestamps
-- `text` - For textual string data
+- `integer` - For integer values
 - `real` - For floating-point numbers
+- `text` - For textual string data
 - `blob` - For binary data (stored as `Uint8Array`)
+- `timestamp` - For date or timestamps
+- `json` - For structured JSON objects (graphs or documents)
 
 ---
 
@@ -56,6 +58,7 @@ All properties support the following modifiers through method chaining:
 - `.optional()`: Allows the column to be null (escape hatch from the pure type lattice)
 - `.unique()`: Adds a unique constraint
 - `.default(value)`: Sets a default value for the column
+- `.array()`: Marks the column as an array of multiple of the same typed values
 
 **Note**: All fields are **required** (non-nullable) by default. Use `.optional()` to allow null values.
 
