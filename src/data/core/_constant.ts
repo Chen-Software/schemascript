@@ -2,16 +2,19 @@ import { sql } from "../proxies/sqlite";
 
 const SqlValue = () => ({
 	now: sql`CURRENT_TIMESTAMP`,
+	emptyArray: sql`'[]'`,
 });
 
 const sqlValue = SqlValue();
 
 const sqlConstant = () => ({
 	now: sqlValue.now,
+	emptyArray: sqlValue.emptyArray,
 });
 
 const constant = () => ({
 	now: "now",
+	emptyArray: "[]",
 });
 
 // @ts-expect-error

@@ -106,7 +106,7 @@ describe("Schema toString", () => {
 	test("should handle fields with custom names", () => {
 		const schema = Schema("custom_names", (prop) => ({
 			user_id: prop.integer("id"),
-			user_name: prop.text("name").metadata("full_name"),
+			user_name: prop.text("name").init("full_name"),
 		}));
 		const result = schema.toString();
 		const expected = _$`
@@ -132,11 +132,11 @@ test("should handle enum field type", () => {
 			   integer("id").identifier(),
 			   enum("status",
 			    {   options:
-						[
-							"pending", 
-							"active", 
-							"inactive",
-						]
+						{
+							pending: 1,
+							active: 2,
+							inactive: 3,
+						}
 				}
 			   )
 			}`;

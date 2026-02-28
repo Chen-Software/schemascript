@@ -25,15 +25,15 @@ function Schema<TName extends string>(
 
 					switch (prop.type) {
 						case "enum": {
-							const config = prop.config as
+							const config = prop.configs as
 								| { options?: Record<string, number> }
 								| undefined;
 							const options = config?.options;
 							if (options && typeof options === "object") {
-								const values = Object.keys(options)
-									.map((v) => `\t\t\t\t"${v}",`)
+								const values = Object.entries(options)
+									.map(([k, v]) => `\t\t\t\t${k}: ${v},`)
 									.join("\n");
-								return `   enum("${colName}",\n    {   options:\n\t\t\t[\n${values}\n\t\t\t]\n\t}\n   )${optional}${defaultVal}`;
+								return `   enum("${colName}",\n    {   options:\n\t\t\t{\n${values}\n\t\t\t}\n\t\t}\n   )${optional}${defaultVal}`;
 							}
 						}
 					}

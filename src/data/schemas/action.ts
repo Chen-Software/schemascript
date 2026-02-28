@@ -16,14 +16,12 @@ const action: SchemaBuilder = () => ({
 	 *
 	 * @name timestamp
 	 * @description The timestamp of the action.
-	 * @type Integer.Timestamp
+	 * @type TIMESTAMP
 	 */
-	timestamp: field
-		.integer("timestamp", { mode: "timestamp" })
-		.default(value.now),
+	timestamp: field.timestamp("timestamp").default(value.now),
 });
 
 const actionSchema = Schema("Action", action);
 const actionTable = Table("actions", action);
 
-export { actionSchema, actionTable };
+export { action, actionSchema, actionTable };

@@ -11,32 +11,74 @@ function Table<TName extends string>(
 	const sqliteColumns: Record<string, primitive> = {};
 
 	for (const [key, prop] of Object.entries(fields)) {
-		const colName = prop.name ?? key;
+		const columnName = prop.name ?? key;
 		let builder: primitive;
 
-		switch (prop.type) {
-			case "integer":
-				builder = integer(colName);
-				break;
-			case "text":
-				builder = text(colName);
-				break;
-			case "real":
-				builder = real(colName);
-				break;
-			case "blob":
-				builder = blob(colName, { mode: "buffer" });
-				break;
-			case "enum": {
-				const config = prop.config as { options?: string[] } | undefined;
-				builder = integer(colName, {
-					mode: "number",
-					...(config?.options as unknown as Record<string, unknown>),
-				});
-				break;
+		if (prop.isArray) {
+			builder = blob(columnName, { mode: "json" });
+			switch (prop.type) {
+				case "integer": {
+					builder = builder.$type(Array<bigint>);
+					break;
+				}
+				case "real": {
+					builder = builder.$type(Array<number>);
+					break;
+				}
+				case "text": {
+					builder = builder.$type(Array<string>);
+					break;
+				}
+				case "blob": {
+					builder = builder.$type(Array<typeof Uint8Array>);
+					break;
+				}
+				case "json": {
+					builder = builder.$type(Array<object>);
+					break;
+				}
+				case "timestamp": {
+					builder = builder.$type(Array<bigint>);
+					break;
+				}
+				case "enum": {
+					builder = builder.$type(Array<bigint>);
+					break;
+				}
+				default:
+					throw new Error(`Unsupported type: ${prop.type}`);
 			}
-			default:
-				throw new Error(`Unsupported type: ${prop.type}`);
+		} else {
+			switch (prop.type) {
+				case "integer":
+					builder = integer(columnName);
+					break;
+				case "real":
+					builder = real(columnName);
+					break;
+				case "text":
+					builder = text(columnName);
+					break;
+				case "blob":
+					builder = blob(columnName, { mode: "buffer" });
+					break;
+				case "timestamp":
+					builder = integer(columnName, { mode: "timestamp" });
+					break;
+				case "json":
+					builder = blob(columnName, { mode: "json" });
+					break;
+				case "enum": {
+					const config = prop.configs as { options?: string[] } | undefined;
+					builder = integer(columnName, {
+						mode: "number",
+						...(config?.options as unknown as Record<string, unknown>),
+					});
+					break;
+				}
+				default:
+					throw new Error(`Unsupported type: ${prop.type}`);
+			}
 		}
 
 		if (prop.isIdentifier) {
