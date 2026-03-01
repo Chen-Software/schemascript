@@ -2,6 +2,7 @@ import type { SQL } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import {
 	blob,
+	customType,
 	integer,
 	real,
 	sqliteTable,
@@ -70,4 +71,5 @@ export {
 	text,
 	sql,
 	type SQL,
+	customType,
 };

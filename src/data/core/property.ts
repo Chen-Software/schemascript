@@ -37,16 +37,34 @@ class Property<DataType extends string, TData = unknown, TConfig = never> {
 		return this.setOptions({ defaultValue: value });
 	}
 
-	identifier(): Property<DataType, TData, TConfig> {
-		return this.setOptions({ isIdentifier: true });
+	identifier(
+		this: Property<Exclude<DataType, "enum">, TData, TConfig>,
+	): Property<DataType, TData, TConfig> {
+		if (this._type === "enum") {
+			throw new Error("Enums cannot be identifiers.");
+		}
+		return this.setOptions({ isIdentifier: true }) as unknown as Property<
+			DataType,
+			TData,
+			TConfig
+		>;
 	}
 
 	optional(): Property<DataType, TData | null, TConfig> {
 		return this.setOptions({ isOptional: true });
 	}
 
-	unique(): Property<DataType, TData, TConfig> {
-		return this.setOptions({ isUnique: true });
+	unique(
+		this: Property<Exclude<DataType, "enum">, TData, TConfig>,
+	): Property<DataType, TData, TConfig> {
+		if (this._type === "enum") {
+			throw new Error("Enums cannot be unique.");
+		}
+		return this.setOptions({ isUnique: true }) as unknown as Property<
+			DataType,
+			TData,
+			TConfig
+		>;
 	}
 
 	array(): Property<DataType, TData[], TConfig> {
@@ -55,10 +73,6 @@ class Property<DataType extends string, TData = unknown, TConfig = never> {
 			TData[],
 			TConfig
 		>;
-	}
-
-	deriveFrom(config: DeriveConfig): Property<DataType, TData, TConfig> {
-		return this.setOptions({ deriveConfig: config });
 	}
 
 	references(ref: () => unknown): Property<DataType, TData, TConfig> {
@@ -93,10 +107,6 @@ class Property<DataType extends string, TData = unknown, TConfig = never> {
 		return !!this.options.isArray;
 	}
 
-	get deriveConfig(): DeriveConfig | undefined {
-		return this.options.deriveConfig;
-	}
-
 	get hasDefault(): boolean {
 		return this.options.defaultValue !== undefined;
 	}
@@ -107,9 +117,7 @@ class Property<DataType extends string, TData = unknown, TConfig = never> {
 
 	toString(): string {
 		const name = this.name ?? "unnamed";
-		const identifier = this.isIdentifier ? ".identifier()" : "";
 		const optional = this.isOptional ? ".optional()" : "";
-		const unique = this.isUnique ? ".unique()" : "";
 		const array = this.isArray ? ".array()" : "";
 		const defaultVal = this.hasDefault
 			? `.default(${typeof this.defaultValue === "bigint" ? this.defaultValue.toString() : JSON.stringify(this.defaultValue)})`
@@ -117,18 +125,80 @@ class Property<DataType extends string, TData = unknown, TConfig = never> {
 
 		if (this._type === "enum") {
 			const config = this.configs as
-				| { options?: Record<string, number> }
+				| { options?: string[] | Record<string, number> }
 				| undefined;
 			const options = config?.options;
-			if (options && typeof options === "object") {
-				const values = Object.entries(options)
-					.map(([k, v]) => `\t\t\t\t${k}: ${v},`)
-					.join("\n");
-				return `enum("${name}",\n    {   options:\n\t\t\t{\n${values}\n\t\t\t}\n\t}\n   )${identifier}${optional}${unique}${array}${defaultVal}`;
+			if (options) {
+				if (Array.isArray(options)) {
+					const values = options.map((v) => `"${v}"`).join(", ");
+					return `enum("${name}",\n    {   options:\n\t\t\t[${values}]\n\t}\n   )${optional}${array}${defaultVal}`;
+				}
+				if (typeof options === "object") {
+					const values = Object.entries(options)
+						.map(([k, v]) => `\t\t\t\t${k}: ${v},`)
+						.join("\n");
+					return `enum("${name}",\n    {   options:\n\t\t\t{\n${values}\n\t\t\t}\n\t\t}\n   )${optional}${array}${defaultVal}`;
+				}
 			}
 		}
 
+		const identifier = this.isIdentifier ? ".identifier()" : "";
+		const unique = this.isUnique ? ".unique()" : "";
 		return `${this._type}("${name}")${identifier}${optional}${unique}${array}${defaultVal}`;
+	}
+
+	toTypeScriptType(): string {
+		let typeStr: string;
+		switch (this._type) {
+			case "integer":
+				typeStr = "bigint";
+				break;
+			case "real":
+				typeStr = "number";
+				break;
+			case "text":
+				typeStr = "string";
+				break;
+			case "blob":
+				typeStr = "Uint8Array";
+				break;
+			case "timestamp":
+				typeStr = "Date";
+				break;
+			case "node":
+				typeStr = "object";
+				break;
+			case "enum": {
+				const config = this.configs as
+					| { options?: string[] | Record<string, number> }
+					| undefined;
+				const options = config?.options;
+				if (options) {
+					if (Array.isArray(options)) {
+						typeStr = options.map((v) => `"${v}"`).join(" | ");
+					} else {
+						typeStr = Object.keys(options)
+							.map((v) => `"${v}"`)
+							.join(" | ");
+					}
+				} else {
+					typeStr = "string | number";
+				}
+				break;
+			}
+			default:
+				typeStr = "unknown";
+		}
+
+		if (this.isArray) {
+			typeStr = `${typeStr}[]`;
+		}
+
+		if (this.isOptional) {
+			typeStr = `${typeStr} | null`;
+		}
+
+		return typeStr;
 	}
 
 	toJSON() {
@@ -140,12 +210,6 @@ class Property<DataType extends string, TData = unknown, TConfig = never> {
 	}
 }
 
-type DeriveConfig = {
-	schemas: (SchemaBuilder | string | (() => SchemaBuilder))[];
-	joinOn: (o: string, u: string) => string;
-	sql: (o: string, u: string) => string;
-};
-
 type PropertyOptions<TData = unknown, TConfig = unknown> = {
 	name?: string;
 	config?: TConfig;
@@ -153,7 +217,6 @@ type PropertyOptions<TData = unknown, TConfig = unknown> = {
 	isIdentifier: boolean;
 	isUnique: boolean;
 	isArray?: boolean;
-	deriveConfig?: DeriveConfig;
 	defaultValue?: TData;
 	autoIncrement?: boolean;
 	references?: () => unknown;
@@ -165,9 +228,4 @@ type PropertyBuilder<
 	TConfig = unknown,
 > = (name: string, config?: TConfig) => Property<DataType, TData, TConfig>;
 
-export {
-	Property,
-	type PropertyOptions,
-	type PropertyBuilder,
-	type DeriveConfig,
-};
+export { Property, type PropertyOptions, type PropertyBuilder };

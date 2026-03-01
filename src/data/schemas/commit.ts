@@ -1,7 +1,5 @@
 import type { SchemaBuilder } from "../core";
 import { field, Schema, Table, value } from "../core";
-import { action } from "./action";
-import { artefact } from "./artefact";
 
 const commit: SchemaBuilder = () => ({
 	/**
@@ -56,14 +54,9 @@ const commit: SchemaBuilder = () => ({
 	 *
 	 * @name author
 	 * @description The author action of the commit.
-	 * @type JSON
-	 * @derived
+	 * @type NODE
 	 */
-	author: field.json("author").deriveFrom({
-		schemas: [action],
-		joinOn: (o, u) => `${o}.action_id = ${u}.action_id`,
-		sql: (o, u) => `${u}`,
-	}),
+	author: field.node("author"),
 
 	/**
 	 * The committer action.
@@ -71,13 +64,8 @@ const commit: SchemaBuilder = () => ({
 	 * @name committer
 	 * @description The committer action.
 	 * @type TEXT.JSON
-	 * @derived
 	 */
-	committer: field.text("committer", { mode: "json" }).deriveFrom({
-		schemas: [action],
-		joinOn: (o, u) => `${o}.action_id = ${u}.action_id`,
-		sql: (o, u) => `${u}`,
-	}),
+	committer: field.text("committer", { mode: "json" }),
 
 	/**
 	 * The content of the commit.
@@ -87,15 +75,7 @@ const commit: SchemaBuilder = () => ({
 	 * @type TEXT.Array
 	 * @array
 	 */
-	artefacts: field
-		.text("artefacts")
-		.deriveFrom({
-			schemas: [artefact],
-			joinOn: (o, u) => `${o}.digest = ${u}.digest`,
-			sql: (o, u) => `${u}.author.date`,
-		})
-		.array()
-		.default(value.emptyArray),
+	artefacts: field.text("artefacts").array().default(value.emptyArray),
 });
 
 const commitSchema = Schema("Commit", commit);

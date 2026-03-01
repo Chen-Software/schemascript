@@ -1,6 +1,5 @@
 import type { SchemaBuilder } from "../core";
 import { field, Schema, Table, value } from "../core";
-import { commit } from "./commit";
 
 const artefact: SchemaBuilder = () => ({
 	/**
@@ -45,16 +44,8 @@ const artefact: SchemaBuilder = () => ({
 	 * @name modified_at
 	 * @description The last modification timestamp of the artefact.
 	 * @type TIMESTAMP
-	 * @derived
 	 */
-	modifiedAt: field
-		.timestamp("modified_at")
-		.deriveFrom({
-			schemas: [commit],
-			joinOn: (o, u) => `${o}.digest = ${u}.digest`,
-			sql: (o, u) => `${u}.committer.date`,
-		})
-		.default(value.now),
+	modifiedAt: field.timestamp("modified_at").default(value.now),
 
 	/**
 	 * The creation timestamp of the artefact.
@@ -62,16 +53,8 @@ const artefact: SchemaBuilder = () => ({
 	 * @name created_at
 	 * @description The creation timestamp of the artefact.
 	 * @type INTEGER.Timestamp
-	 * @derived
 	 */
-	createdAt: field
-		.timestamp("created_at")
-		.deriveFrom({
-			schemas: [commit],
-			joinOn: (o, u) => `${o}.digest = ${u}.digest`,
-			sql: (o, u) => `${u}.author.date`,
-		})
-		.default(value.now),
+	createdAt: field.timestamp("created_at").default(value.now),
 });
 
 const artefactSchema = Schema("Artefact", artefact);

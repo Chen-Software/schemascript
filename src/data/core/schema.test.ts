@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { unlinkSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { $ } from "bun";
 import { _$ } from "@/utils/dedent";
 import { Schema } from "./schema";
 
@@ -137,8 +140,147 @@ test("should handle enum field type", () => {
 							active: 2,
 							inactive: 3,
 						}
-				}
+					}
 			   )
 			}`;
 	expect(result).toBe(expected);
+});
+
+describe("toTypeScriptInterface", () => {
+	test("should generate correct TypeScript interface", () => {
+		const schema = Schema("User", (prop) => ({
+			id: prop.integer("id").identifier(),
+			username: prop.text("username").unique(),
+			email: prop.text("email").optional(),
+			avatar: prop.blob("avatar").optional(),
+			age: prop.real("age").default(18),
+			createdAt: prop.timestamp("created_at"),
+			tags: prop.text("tags").array(),
+			metadata: prop.node("metadata"),
+			role: prop.enum("role", { options: ["admin", "user"] }),
+		}));
+
+		const result = schema.toTypeScriptInterface();
+		const expected = _$`
+			interface User {
+			  id: bigint;
+			  username: string;
+			  email: string | null;
+			  avatar: Uint8Array | null;
+			  age: number;
+			  createdAt: Date;
+			  tags: string[];
+			  metadata: object;
+			  role: "admin" | "user";
+			}`;
+		expect(result).toBe(expected);
+	});
+
+	test("should validate generated TypeScript end-to-end using Bun.build", async () => {
+		const schema = Schema("Comprehensive", (prop) => ({
+			id: prop.integer("id").identifier(),
+			name: prop.text("name"),
+			age: prop.real("age").optional(),
+			data: prop.blob("data"),
+			lastLogin: prop.timestamp("last_login").default(new Date()),
+			metadata: prop.node("metadata"),
+			status: prop.enum("status", { options: ["active", "inactive"] }),
+			tags: prop.text("tags").array(),
+		}));
+
+		const generatedCode = schema.toTypeScriptInterface();
+		const testFilePath = join(process.cwd(), "generated-type-test.ts");
+
+		// Wrap in a complete TS file that uses the interface
+		const fullContent = `
+${generatedCode}
+
+const testObj: Comprehensive = {
+    id: 1n,
+    name: "Jules",
+    age: 25,
+    data: new Uint8Array([1, 2, 3]),
+    lastLogin: new Date(),
+    metadata: { key: "value" },
+    status: "active",
+    tags: ["a", "b"]
+};
+
+console.log(testObj);
+`;
+
+		writeFileSync(testFilePath, fullContent);
+
+		try {
+			const buildResult = await Bun.build({
+				entrypoints: [testFilePath],
+				target: "node",
+			});
+			expect(buildResult.success).toBe(true);
+		} finally {
+			unlinkSync(testFilePath);
+		}
+	});
+});
+
+describe("Type Safety Restrictions", () => {
+	test("should forbid identifier() on enums at compile time", async () => {
+		const testFilePath = join(process.cwd(), "enum-identifier-test.ts");
+		const content = `
+import { Schema } from "./src/data/core/schema";
+
+const s = Schema("test", (prop) => ({
+    // @ts-expect-error - enums cannot be identifiers
+    role: prop.enum("role", { options: ["a", "b"] }).identifier()
+}));
+`;
+		writeFileSync(testFilePath, content);
+		try {
+			const result =
+				await $`bun x tsc --noEmit --target esnext --module esnext --moduleResolution node --skipLibCheck ${testFilePath}`;
+			expect(result.exitCode).toBe(0);
+		} finally {
+			unlinkSync(testFilePath);
+		}
+	});
+
+	test("should forbid unique() on enums at compile time", async () => {
+		const testFilePath = join(process.cwd(), "enum-unique-test.ts");
+		const content = `
+import { Schema } from "./src/data/core/schema";
+
+const s = Schema("test", (prop) => ({
+    // @ts-expect-error - enums cannot be unique
+    role: prop.enum("role", { options: ["a", "b"] }).unique()
+}));
+`;
+		writeFileSync(testFilePath, content);
+		try {
+			const result =
+				await $`bun x tsc --noEmit --target esnext --module esnext --moduleResolution node --skipLibCheck ${testFilePath}`;
+			expect(result.exitCode).toBe(0);
+		} finally {
+			unlinkSync(testFilePath);
+		}
+	});
+
+	test("should throw runtime error if identifier() is called on enum", () => {
+		const schema = Schema("test", (prop) => ({
+			role: prop.enum("role", { options: ["a"] }),
+		}));
+
+		expect(() => (schema.fields.role as any).identifier()).toThrow(
+			"Enums cannot be identifiers.",
+		);
+	});
+
+	test("should throw runtime error if unique() is called on enum", () => {
+		const schema = Schema("test", (prop) => ({
+			role: prop.enum("role", { options: ["a"] }),
+		}));
+
+		expect(() => (schema.fields.role as any).unique()).toThrow(
+			"Enums cannot be unique.",
+		);
+	});
 });

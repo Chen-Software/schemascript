@@ -19,32 +19,54 @@ function Schema<TName extends string>(
 				.map(([key, prop]) => {
 					const colName = prop.name ?? key;
 					const optional = prop.isOptional ? ".optional()" : "";
+					const identifier = prop.isIdentifier ? ".identifier()" : "";
+					const unique = prop.isUnique ? ".unique()" : "";
+					const array = prop.isArray ? ".array()" : "";
 					const defaultVal = prop.hasDefault
 						? `.default(${typeof prop.defaultValue === "bigint" ? prop.defaultValue.toString() : JSON.stringify(prop.defaultValue)})`
 						: "";
 
+					let base = "";
 					switch (prop.type) {
 						case "enum": {
 							const config = prop.configs as
-								| { options?: Record<string, number> }
+								| { options?: string[] | Record<string, number> }
 								| undefined;
 							const options = config?.options;
-							if (options && typeof options === "object") {
-								const values = Object.entries(options)
-									.map(([k, v]) => `\t\t\t\t${k}: ${v},`)
-									.join("\n");
-								return `   enum("${colName}",\n    {   options:\n\t\t\t{\n${values}\n\t\t\t}\n\t\t}\n   )${optional}${defaultVal}`;
+							if (options) {
+								if (Array.isArray(options)) {
+									const values = options.map((v) => `"${v}"`).join(", ");
+									base = `   enum("${colName}",\n    {   options:\n\t\t\t[${values}]\n\t}\n   )`;
+								} else if (typeof options === "object") {
+									const values = Object.entries(options)
+										.map(([k, v]) => `\t\t\t\t${k}: ${v},`)
+										.join("\n");
+									base = `   enum("${colName}",\n    {   options:\n\t\t\t{\n${values}\n\t\t\t}\n\t\t}\n   )`;
+								}
 							}
+							break;
 						}
+						default:
+							base = `   ${prop.type}("${colName}")`;
 					}
-					const identifier = prop.isIdentifier ? ".identifier()" : "";
-					const unique = prop.isUnique ? ".unique()" : "";
 
-					return `   ${prop.type}("${colName}")${identifier}${optional}${unique}${defaultVal}`;
+					return `${base}${identifier}${optional}${unique}${array}${defaultVal}`;
 				})
 				.join(",\n");
 
 			return `Schema: ${name}\n{\n${fieldDescriptions}\n}`;
+		},
+
+		toTypeScriptInterface(): string {
+			const interfaceName = name.charAt(0).toUpperCase() + name.slice(1);
+			const fieldDefinitions = Object.entries(fields)
+				.map(([key, prop]) => {
+					const type = prop.toTypeScriptType();
+					return `  ${key}: ${type};`;
+				})
+				.join("\n");
+
+			return `interface ${interfaceName} {\n${fieldDefinitions}\n}`;
 		},
 
 		toJSON() {
