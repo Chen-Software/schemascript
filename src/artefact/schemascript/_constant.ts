@@ -1,4 +1,4 @@
-import { sql } from "../proxies/sqlite";
+import { sql } from "../../data/proxies/sqlite";
 
 const SqlValue = () => ({
 	now: sql`CURRENT_TIMESTAMP`,

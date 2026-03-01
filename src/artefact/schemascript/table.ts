@@ -1,4 +1,4 @@
-import type { primitive } from "../proxies/sqlite";
+import type { primitive } from "../../data/proxies/sqlite";
 import {
 	blob,
 	customType,
@@ -6,7 +6,7 @@ import {
 	real,
 	sqliteTable,
 	text,
-} from "../proxies/sqlite";
+} from "../../data/proxies/sqlite";
 import { field } from "./field";
 import type { SchemaBuilder } from "./schema";
 

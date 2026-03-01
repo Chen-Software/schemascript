@@ -1,5 +1,5 @@
-import type { SchemaBuilder } from "../core";
-import { field, Schema, Table, value } from "../core";
+import type { SchemaBuilder } from "@artefact/schemascript";
+import { field, Schema, Table, value } from "@artefact/schemascript";
 
 const commit: SchemaBuilder = () => ({
 	/**

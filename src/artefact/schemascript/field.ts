@@ -1,4 +1,4 @@
-import type { SQL } from "../proxies/sqlite";
+import type { SQL } from "../../data/proxies/sqlite";
 import * as Primitive from "./primitive";
 import type { PropertyBuilder } from "./property";
 
