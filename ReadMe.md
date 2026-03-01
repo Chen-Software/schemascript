@@ -1,6 +1,6 @@
 # SchemaScript
 
-**SchemaScript** is a JavaScript-based Domain Specific Language (DSL) designed for defining database schemas with maximum type safety and developer experience. It serves as a high-level abstraction over Drizzle ORM, providing a fluent and declarative API within a secure, sandboxed Rust execution environment.
+**SchemaScript** is a JavaScript-based Domain Specific Language (DSL) and Object-Relation Mapping (ORM) library for defining database schemas delaratively with maximum type safety, constraint enforcement and developer experience. It serves as a high-level abstraction over Drizzle ORM, providing a fluent and declarative API within a secure, sandboxed Rust execution environment.
 
 ---
 
@@ -32,7 +32,7 @@ const User: SchemaBuilder = (prop) => ({
   id: prop.integer().identifier(),
   username: prop.text().unique(),
   email: prop.text().optional(),
-  createdAt: prop.timestamp().default(value.now()),
+  createdAt: prop.timestamp().default(value.now),
 })
 const UserSchema = Schema("User", User);
 const UserTable = Table("User", User);
@@ -74,12 +74,42 @@ All properties support the following modifiers through method chaining:
 
 ### Relations
 
-Define foreign key relationships using a fluent API.
+SchemaScript allows you to define database relationships between tables while maintaining type safety and schema integrity. Relationships are defined at the column level using the `.references()` modifier, which creates a *foreign key constraint* in the underlying SQLite database.
+
+#### One-to-Many Relationship
 
 ```typescript
-const Posts = Table("posts", (prop) => ({
-  id: prop.integer().identifier(),
-  authorId: prop.integer().references(() => Users.id),
+import { Schema } from "@artefact/schemascript";
+
+const User = Schema("User", (prop) => ({
+  id: prop.integer("id").identifier(),
+  username: prop.text("username").unique(),
+}));
+
+const Post = Schema("Post", (prop) => ({
+  id: prop.integer("id").identifier(),
+  authorId: prop.integer("authorId").references(() => User.id),
+  title: prop.text("title"),
+  content: prop.text("content").optional(),
+}));
+```
+
+---
+
+#### Many-to-Many Relationship via Join Table
+
+Many-to-many relationships are represented with an **intermediate join table**:
+
+```typescript
+const Group = Schema("Group", (prop) => ({
+  id: prop.integer("id").identifier(),
+  name: prop.text("name"),
+}));
+
+const UserGroup = Schema("UserGroup", (prop) => ({
+  userId: prop.integer("userId").references(() => User.id),
+  groupId: prop.integer("groupId").references(() => Group.id),
+  joinedAt: prop.timestamp("joinedAt").default(value.now),
 }));
 ```
 
