@@ -2,8 +2,6 @@ import type { FieldBuilder } from "./field";
 import { field } from "./field";
 import type { Property } from "./property";
 
-declare const __host_predict_call: (prompt: string, schema: string) => string;
-
 function Schema<TName extends string>(
 	name: TName,
 	schemaBuilder: SchemaBuilder,
