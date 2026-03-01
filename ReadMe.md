@@ -6,7 +6,7 @@
 
 ## Design Philosophy
 
-1. **Purest Type Lattice (Secure by Default)**: All fields are required (non-nullable) by default, unless explicitly modified as `.optional()`. This ensures the most restrictive and safest type set from the start.
+1. **Secure by Default**: All fields are required (non-nullable) by default, unless explicitly modified as `.optional()`. This ensures the most restrictive and safest type set *(purest type lattice)* from the start.
 
 2. **Declarative**: Describe *what* the data looks like, not *how* to create it.
 
@@ -14,39 +14,47 @@
 
 4. **Type-Safe**: Leverage TypeScript's powerful type system to provide autocomplete and catch errors at compile-time.
 
-5. **Inferred Metadata**: Automatically infer column names from object keys while allowing explicit overrides.
-
 ---
 
 ## Core API
 
-### Schemas
+### Schemas and Tables
 
 Schemas are defined using the `Schema` function. It takes a name and a schema definition.
 
-```typescript
-import { Schema, value } from "schemascript";
+Tables are generated from schema definitions via the `Table` function. It takes the same SchemaBuilder and returns a Drizzle ORM table instance directly.
 
-const Users = Schema("users", (prop) => ({
+```typescript
+import type { SchemaBuilder } from "schemascript";
+import { Schema, Table, value } from "schemascript";
+
+const User: SchemaBuilder = (prop) => ({
   id: prop.integer().identifier(),
   username: prop.text().unique(),
   email: prop.text().optional(),
-  createdAt: prop.integer().default(value.now()),
-}));
+  createdAt: prop.timestamp().default(value.now()),
+})
+const UserSchema = Schema("User", User);
+const UserTable = Table("User", User);
+
+export { User, UserSchema, UserTable }
 ```
 
 ---
 
 ### Data Types
 
-SchemaScript provides 6 core primitive data types:
+SchemaScript provides 7 core primitive data types:
 
-- `integer` - For integer values
-- `real` - For floating-point numbers
-- `text` - For textual string data
-- `blob` - For binary data (stored as `Uint8Array`)
-- `timestamp` - For date or timestamps
-- `json` - For structured JSON objects (graphs or documents)
+| SchemaScript Type | Description / Usage | JS Type | SQLite Type |
+| :--- | :--- | :--- | :--- |
+| `integer` | Whole number integer values | `bigint` | `INTEGER` |
+| `real` | Floating-point real numbers | `number` | `REAL` |
+| `text` | Textual string data | `string` | `TEXT` |
+| `blob` | Binary data | `Uint8Array` | `BLOB` |
+| `timestamp` | Dates and times | `Date` | `INTEGER` |
+| `node` | Structured objects and documents | `object` | `BLOB` (JSON) |
+| `enum` | Performant, type-safe enumerations | `string` (union) | `INTEGER` |
 
 ---
 
@@ -58,7 +66,7 @@ All properties support the following modifiers through method chaining:
 - `.optional()`: Allows the column to be null (escape hatch from the pure type lattice)
 - `.unique()`: Adds a unique constraint
 - `.default(value)`: Sets a default value for the column
-- `.array()`: Marks the column as an array of multiple of the same typed values
+- `.array()`: Marks the column as an array of multiple values. SQLite natively lacks array types, so SchemaScript automatically handles JSON serialization for arrays of any primitive type.
 
 **Note**: All fields are **required** (non-nullable) by default. Use `.optional()` to allow null values.
 
@@ -79,12 +87,31 @@ const Posts = Table("posts", (prop) => ({
 
 ### Enums
 
-First-class support for enums.
+First-class support for performant enums. Enums can be defined using an array of strings or a mapping object. To ensure maximum query performance, all enums are stored as `integer` columns in the database while maintaining their string representations in the application layer.
 
 ```typescript
 const Profile = Schema("profiles", (prop) => ({
   role: prop.enum("role", { options: ["admin", "user", "guest"] }).default("guest"),
+  status: prop.enum("status", { options: { ACTIVE: 1, INACTIVE: 0 } }).default("ACTIVE"),
 }));
+```
+
+---
+
+### TypeScript Generation
+
+SchemaScript can generate standard TypeScript interfaces from your schema definitions.
+
+```typescript
+const userInterface = Users.toTypeScriptInterface();
+/*
+interface Users {
+  id: bigint;
+  username: string;
+  email: string | null;
+  createdAt: Date;
+}
+*/
 ```
 
 ---
@@ -101,38 +128,13 @@ const Custom = Schema("custom", (prop) => ({
 
 ---
 
-## Integration with Artefact Core
-
-SchemaScript is built directly on top of the Artefact `Property` and `Schema` abstractions. It acts as a convenient entry point that bundles the various builders into a single, cohesive interface.
-
-### Architecture Layer Overview
-
-**1. Property Layer** (`property.ts`)
-
-- Immutable builder pattern for defining field properties
-- Type-safe modifiers (`.optional()`, `.default()`, `.unique()`)
-- Each modifier returns a new instance, ensuring immutability
-
-**2. Field Builder Layer** (`field.ts`)
-
-- Provides the factory methods for creating typed properties
-- Maps high-level field types to Property instances with correct metadata
-
-**3. Table Layer** (`table.ts`)
-
-- Converts schema definitions into Drizzle ORM table structures
-- Handles the translation from Property objects to Drizzle column builders
-- Applies all modifiers (primary key, not null, unique, default) correctly
-
----
-
 ## Architecture
 
 The project is architected in three main domains, ensuring a hard boundary between high-level definition and low-level execution.
 
 ### 1. SchemaScript DSL (JavaScript)
 
-A type-safe, fluent API for defining database schemas with SQLite primitives (`integer`, `real`, `text`, `blob`).
+A type-safe, fluent API for defining database schemas with SQLite-optimised primitives (`integer`, `real`, `text`, `blob`, `timestamp`, `node`, `enum`).
 
 - **Immutability**: Every property modifier (`.optional()`, `.default()`, `.unique()`) returns a new instance
 - **Secure by Default**: All fields are non-nullable unless explicitly marked `.optional()`
@@ -175,30 +177,6 @@ graph TB
         H --> I[Rusqlite Engine]
         I --> J[(SQLite DB)]
     end
-```
-
-## Host-Guest Communication Protocol
-
-Communication follows a strict serialisation protocol to ensure safety and type fidelity across the Wasm boundary.
-
-```mermaid
-sequenceDiagram
-    participant JS as JavaScript Guest
-    participant Bridge as Runtime Driver
-    participant Host as Rust Host (WasmEdge)
-    participant DB as SQLite
-    
-    JS->>Bridge: db.select().from(users)
-    Bridge->>Bridge: Serialise {sql, params, method}
-    Bridge->>Host: host_db_query(ptr, len)
-    Host->>Host: Read Guest Memory
-    Host->>DB: Execute Native SQL
-    DB-->>Host: Result Set
-    Host->>Host: Serialise Result (JSON)
-    Host-->>Bridge: return result_len
-    Bridge->>Host: host_copy_result(ptr, max)
-    Host->>Bridge: Write Result to Guest Memory
-    Bridge-->>JS: Typed Rows
 ```
 
 ---
