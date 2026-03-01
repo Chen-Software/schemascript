@@ -25,8 +25,8 @@ Schemas are defined using the `Schema` function. It takes a name and a schema de
 Tables are generated from schema definitions via the `Table` function. It takes the same SchemaBuilder and returns a Drizzle ORM table instance directly.
 
 ```typescript
-import type { SchemaBuilder } from "schemascript";
-import { Schema, Table, value } from "schemascript";
+import type { SchemaBuilder } from "@artefact/schemascript";
+import { Schema, Table, value } from "@artefact/schemascript";
 
 const User: SchemaBuilder = (prop) => ({
   id: prop.integer().identifier(),
