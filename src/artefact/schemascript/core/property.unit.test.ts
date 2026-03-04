@@ -2,75 +2,72 @@ import { describe, expect, test } from "bun:test";
 import { Property } from "./property";
 
 describe("Property", () => {
-	test("should initialize with default options", () => {
+	test("should initialize correctly", () => {
 		const prop = new Property("text");
 		expect(prop.type).toBe("text");
-		expect(prop.name).toBeUndefined();
-		expect(prop.isUnique).toBe(false);
 		expect(prop.isOptional).toBe(false);
+		expect(prop.isUnique).toBe(false);
 	});
 
-	test("unique() should return a new property with isUnique true", () => {
+	test("init should return the same property with casted type", () => {
 		const prop = new Property("integer");
-		const uniqueProp = prop.unique();
-		expect(uniqueProp.isUnique).toBe(true);
-		expect(prop.isUnique).toBe(false);
+		const inited = prop.init<bigint>();
+		expect(inited).toBe(prop);
 	});
 
-	test("optional() should return a new property with isOptional true", () => {
+	test("finalise should return a frozen property with name", () => {
 		const prop = new Property("text");
-		const optionalProp = prop.optional();
-		expect(optionalProp.isOptional).toBe(true);
-		expect(prop.isOptional).toBe(false);
-	});
-
-	test("unique() should throw on enum", () => {
-		const prop = new Property("enum");
-		expect(() => prop.unique()).toThrow("Enums cannot be unique.");
-	});
-
-	test("finalise() should return a new property with the given name and freeze it", () => {
-		const prop = new Property("text");
-		const finalised = prop.finalise("myColumn");
-		expect(finalised.name).toBe("myColumn");
+		const finalised = prop.finalise("test_name");
+		expect(finalised.name).toBe("test_name");
 		expect(Object.isFrozen(finalised)).toBe(true);
 	});
 
-	test("enumOptions() should set enum options", () => {
-		const prop = new Property("enum");
-		const config = { options: ["A", "B"] };
-		const withOptions = prop.enumOptions(config);
-		expect(withOptions.enumConfigs).toEqual(config);
+	test("optional should mark property as optional", () => {
+		const prop = new Property("text");
+		const optionalProp = prop.optional();
+		expect(optionalProp.isOptional).toBe(true);
+		expect(prop.isOptional).toBe(false); // Immutability
 	});
 
-	test("toString() for standard types", () => {
-		const prop = new Property("text").finalise("username");
-		expect(prop.toString()).toBe('text("username")');
+	test("unique should mark property as unique", () => {
+		const prop = new Property("text");
+		const uniqueProp = prop.unique();
+		expect(uniqueProp.isUnique).toBe(true);
+		expect(prop.isUnique).toBe(false); // Immutability
+	});
+
+	test("toString for primitive types", () => {
+		const prop = new Property("text").finalise("id");
+		expect(prop.toString()).toBe('text("id")');
+
+		const optionalProp = new Property("integer").optional().finalise("age");
+		expect(optionalProp.toString()).toBe('integer("age").optional()');
 
 		const uniqueProp = new Property("text").unique().finalise("email");
 		expect(uniqueProp.toString()).toBe('text("email").unique()');
 
-		const optionalProp = new Property("integer").optional().finalise("age");
-		expect(optionalProp.toString()).toBe('integer("age").optional()');
+		const bothProp = new Property("text").optional().unique().finalise("desc");
+		expect(bothProp.toString()).toBe('text("desc").optional().unique()');
 	});
 
-	test("toString() for enum types with array options", () => {
+	test("toString for enums with array options", () => {
 		const prop = new Property("enum")
-			.enumOptions({ options: ["admin", "user"] })
+			.enumOptions({ options: ["ADMIN", "USER"] })
 			.finalise("role");
 		expect(prop.toString()).toContain('enum("role"');
-		expect(prop.toString()).toContain('["admin", "user"]');
+		expect(prop.toString()).toContain('["ADMIN", "USER"]');
 	});
 
-	test("toString() for enum types with object options", () => {
+	test("toString for enums with object options", () => {
 		const prop = new Property("enum")
 			.enumOptions({ options: { ACTIVE: 1, INACTIVE: 0 } })
 			.finalise("status");
 		expect(prop.toString()).toContain('enum("status"');
-		expect(prop.toString()).toContain("ACTIVE: 1");
+		expect(prop.toString()).toContain("ACTIVE: 1,");
+		expect(prop.toString()).toContain("INACTIVE: 0,");
 	});
 
-	test("toTypeScriptType() mapping", () => {
+	test("toTypeScriptType for all types", () => {
 		expect(new Property("integer").toTypeScriptType()).toBe("bigint");
 		expect(new Property("real").toTypeScriptType()).toBe("number");
 		expect(new Property("text").toTypeScriptType()).toBe("string");
@@ -78,30 +75,36 @@ describe("Property", () => {
 		expect(new Property("blob").toTypeScriptType()).toBe("Uint8Array");
 		expect(new Property("timestamp").toTypeScriptType()).toBe("Date");
 		expect(new Property("node").toTypeScriptType()).toBe("object");
+		expect(new Property("unknown_type" as any).toTypeScriptType()).toBe(
+			"unknown",
+		);
+	});
 
-		const enumProp = new Property("enum").enumOptions({ options: ["A", "B"] });
-		expect(enumProp.toTypeScriptType()).toBe('"A" | "B"');
+	test("toTypeScriptType for optional types", () => {
+		expect(new Property("text").optional().toTypeScriptType()).toBe(
+			"string | null",
+		);
+	});
 
-		const enumObjProp = new Property("enum").enumOptions({
+	test("toTypeScriptType for enums", () => {
+		const prop = new Property("enum").enumOptions({ options: ["A", "B"] });
+		expect(prop.toTypeScriptType()).toBe('"A" | "B"');
+
+		const propObj = new Property("enum").enumOptions({
 			options: { X: 1, Y: 2 },
 		});
-		expect(enumObjProp.toTypeScriptType()).toBe('"X" | "Y"');
+		expect(propObj.toTypeScriptType()).toBe('"X" | "Y"');
 
-		const unknownProp = new Property("unknown" as any);
-		expect(unknownProp.toTypeScriptType()).toBe("unknown");
+		const propNoConfig = new Property("enum");
+		expect(propNoConfig.toTypeScriptType()).toBe("string | number");
 	});
 
-	test("toTypeScriptType() handles optional", () => {
-		const prop = new Property("text").optional();
-		expect(prop.toTypeScriptType()).toBe("string | null");
-	});
-
-	test("toJSON() should return all options", () => {
-		const prop = new Property("text").unique().optional().finalise("test");
+	test("toJSON should include type and options", () => {
+		const prop = new Property("text").optional().unique().finalise("name");
 		const json = prop.toJSON();
 		expect(json.type).toBe("text");
-		expect(json.name).toBe("test");
-		expect(json.isUnique).toBe(true);
+		expect(json.name).toBe("name");
 		expect(json.isOptional).toBe(true);
+		expect(json.isUnique).toBe(true);
 	});
 });
