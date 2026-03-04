@@ -2,7 +2,7 @@
 	"name": "artefact",
 	"module": "src/main.ts",
 	"type": "module",
-	"private": true,
+	"version": "0.1.0.rc",
 	"scripts": {
 		"fix": "bun run check",
 		"check": "bun x --bun @biomejs/biome check --fix .",
