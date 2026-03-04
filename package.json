@@ -1,5 +1,5 @@
 {
-	"name": "@artefact/artefact",
+	"name": "@artefact/schemascript",
 	"module": "src/main.ts",
 	"type": "module",
 	"version": "0.1.0.rc",
