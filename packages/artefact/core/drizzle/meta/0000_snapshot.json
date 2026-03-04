@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f44374a5-f220-4371-9a62-59dafed2d79e",
+  "id": "2b730809-0d7c-4516-8f9c-60fac49216af",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "artefacts": {
@@ -34,7 +34,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'now'"
+          "default": "CURRENT_TIMESTAMP"
         },
         "created_at": {
           "name": "created_at",
@@ -42,7 +42,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'now'"
+          "default": "CURRENT_TIMESTAMP"
         }
       },
       "indexes": {

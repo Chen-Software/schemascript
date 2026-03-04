@@ -3,7 +3,7 @@ import { readdir, stat } from "node:fs/promises";
 import { basename, extname, join } from "node:path";
 
 describe("Test Policy Enforcement", () => {
-	const srcDir = join(process.cwd(), "src");
+	const srcDir = join(process.cwd(), "packages/artefact/core/src");
 
 	const excludedFiles = [
 		"index.ts",

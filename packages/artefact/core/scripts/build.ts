@@ -41,8 +41,8 @@ await Bun.build({
 });
 
 await Bun.build({
-	entrypoints: ["./packages/artefact/schemascript/index.ts"],
-	outdir: "./packages/artefact/schemascript/dist",
+	entrypoints: ["../../artefact/schemascript/index.ts"],
+	outdir: "../../artefact/schemascript/dist",
 	define: {
 		BUILD_VERSION: JSON.stringify(version.trim()),
 		BUILD_TARGET: JSON.stringify(target),
@@ -58,10 +58,11 @@ console.info("Generating type definitions...");
 try {
 	console.info("Generating type definitions for @artefact/schemascript...");
 	execSync(
-		"cd packages/artefact/schemascript && bun x tsc --project tsconfig.json || true",
+		"cd ../../artefact/schemascript && bun x tsc --project tsconfig.json || true",
 	);
+	// Flatten the output: tsc with rootDir: "../../" (packages/) puts files in dist/artefact/schemascript/
 	execSync(
-		"cd packages/artefact/schemascript && cp -r dist/packages/artefact/schemascript/* dist/ && rm -rf dist/packages dist/data dist/utils dist/core/*.test.d.ts",
+		"cd ../../artefact/schemascript && if [ -d dist/artefact/schemascript ]; then cp -r dist/artefact/schemascript/* .; fi && rm -rf dist artefact data utils core/*.test.d.ts",
 	);
 } catch (e) {
 	console.error("Error generating type definitions:", e);

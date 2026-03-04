@@ -6,11 +6,11 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "outDir": "./dist",
-    "rootDir": "../../../",
+    "rootDir": "../../",
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["../../../src/*"]
+      "@/*": ["../core/src/*"]
     },
     "skipLibCheck": true
   },

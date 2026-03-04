@@ -3,6 +3,9 @@
   "workspaces": {
     "": {
       "name": "artefact",
+    },
+    "packages/artefact/core": {
+      "name": "@artefact/artefact",
       "dependencies": {
         "drizzle-orm": "^0.45.1",
       },
@@ -16,8 +19,19 @@
         "typescript": "^5.9.3",
       },
     },
+    "packages/artefact/schemascript": {
+      "name": "@artefact/schemascript",
+      "version": "0.1.0-rc.1",
+      "peerDependencies": {
+        "drizzle-orm": ">=0.45.1",
+      },
+    },
   },
   "packages": {
+    "@artefact/artefact": ["@artefact/artefact@workspace:packages/artefact/core"],
+
+    "@artefact/schemascript": ["@artefact/schemascript@workspace:packages/artefact/schemascript"],
+
     "@biomejs/biome": ["@biomejs/biome@2.4.5", "", { "optionalDependencies": { "@biomejs/cli-darwin-arm64": "2.4.5", "@biomejs/cli-darwin-x64": "2.4.5", "@biomejs/cli-linux-arm64": "2.4.5", "@biomejs/cli-linux-arm64-musl": "2.4.5", "@biomejs/cli-linux-x64": "2.4.5", "@biomejs/cli-linux-x64-musl": "2.4.5", "@biomejs/cli-win32-arm64": "2.4.5", "@biomejs/cli-win32-x64": "2.4.5" }, "bin": { "biome": "bin/biome" } }, "sha512-OWNCyMS0Q011R6YifXNOg6qsOg64IVc7XX6SqGsrGszPbkVCoaO7Sr/lISFnXZ9hjQhDewwZ40789QmrG0GYgQ=="],
 
     "@biomejs/cli-darwin-arm64": ["@biomejs/cli-darwin-arm64@2.4.5", "", { "os": "darwin", "cpu": "arm64" }, "sha512-lGS4Nd5O3KQJ6TeWv10mElnx1phERhBxqGP/IKq0SvZl78kcWDFMaTtVK+w3v3lusRFxJY78n07PbKplirsU5g=="],
