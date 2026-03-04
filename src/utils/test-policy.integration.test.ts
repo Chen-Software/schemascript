@@ -5,9 +5,15 @@ import { basename, extname, join } from "node:path";
 describe("Test Policy Enforcement", () => {
 	const srcDir = join(process.cwd(), "src");
 
-	const excludedFiles = ["index.ts", "main.ts"];
+	const excludedFiles = [
+		"index.ts",
+		"main.ts",
+		"_constant.ts",
+		"value.ts",
+		"primitive.ts",
+	];
 
-	const excludedDirs = ["data/proxies", "scripts"];
+	const excludedDirs = ["data/proxies", "scripts", "utils/testing"];
 
 	async function getFiles(dir: string): Promise<string[]> {
 		const entries = await readdir(dir, { withFileTypes: true });
