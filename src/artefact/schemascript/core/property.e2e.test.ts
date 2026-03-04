@@ -37,6 +37,7 @@ export const testTable = Table("test_modifiers", (prop) => ({
 		expect(generatedSql).toContain("`optional_field` text");
 		expect(generatedSql).not.toContain("`optional_field` text NOT NULL");
 		expect(generatedSql).toContain("`required_unique` text NOT NULL");
+		expect(generatedSql.toLowerCase()).toContain("unique");
 		expect(generatedSql).toContain(
 			"CREATE UNIQUE INDEX `test_modifiers_required_unique_unique` ON `test_modifiers` (`required_unique`)",
 		);
