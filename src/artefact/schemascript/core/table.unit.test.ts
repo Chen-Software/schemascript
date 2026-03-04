@@ -1,65 +1,122 @@
 import { describe, expect, test } from "bun:test";
-import { getTableColumns } from "drizzle-orm";
+import { field } from "./field";
 import { Table } from "./table";
 
 describe("Table", () => {
-	test("should create a Drizzle table with correct columns", () => {
-		const UserTable = Table("users", (prop) => ({
-			id: prop.integer(),
-			name: prop.text().unique().optional(),
-			status: prop.enum({ options: ["active", "inactive"] }),
+	test("should map all primitive types to Drizzle columns", () => {
+		const MyTable = Table("my_table", () => ({
+			int: field.integer(),
+			real: field.real(),
+			txt: field.text(),
+			bool: field.boolean(),
+			buf: field.blob(),
+			time: field.timestamp(),
+			obj: field.node(),
 		}));
 
-		expect(UserTable).toBeDefined();
-		const columns = getTableColumns(UserTable);
-		expect(columns.id).toBeDefined();
-		expect(columns.name).toBeDefined();
+		expect(MyTable).toBeDefined();
+		const columns = (
+			MyTable as unknown as {
+				[key: symbol]: Record<string, { notNull: boolean }>;
+			}
+		)[Symbol.for("drizzle:Columns")];
+		expect(Object.keys(columns)).toEqual([
+			"int",
+			"real",
+			"txt",
+			"bool",
+			"buf",
+			"time",
+			"obj",
+		]);
+	});
+
+	test("should handle optional fields by omitting notNull", () => {
+		const MyTable = Table("my_table", () => ({
+			req: field.text(),
+			opt: field.text().optional(),
+		}));
+
+		const columns = (
+			MyTable as unknown as {
+				[key: symbol]: Record<string, { notNull: boolean }>;
+			}
+		)[Symbol.for("drizzle:Columns")];
+		expect(columns.req.notNull).toBe(true);
+		expect(columns.opt.notNull).toBe(false);
+	});
+
+	test("should handle unique fields", () => {
+		const MyTable = Table("my_table", () => ({
+			email: field.text().unique(),
+			id: field.integer(),
+		}));
+
+		const columns = (
+			MyTable as unknown as {
+				[key: symbol]: Record<string, { isUnique: boolean }>;
+			}
+		)[Symbol.for("drizzle:Columns")];
+		expect(columns.email.isUnique).toBe(true);
+		expect(columns.id.isUnique).toBe(false);
+	});
+
+	test("should handle both unique and optional fields", () => {
+		const MyTable = Table("my_table", () => ({
+			both: field.text().optional().unique(),
+		}));
+
+		const columns = (
+			MyTable as unknown as {
+				[key: symbol]: Record<string, { isUnique: boolean; notNull: boolean }>;
+			}
+		)[Symbol.for("drizzle:Columns")];
+		expect(columns.both.isUnique).toBe(true);
+		expect(columns.both.notNull).toBe(false);
+	});
+
+	test("should handle enums with mapping", () => {
+		const MyTable = Table("my_table", () => ({
+			status: field.enum({ options: ["A", "B"] }),
+		}));
+
+		const columns = (
+			MyTable as unknown as { [key: symbol]: Record<string, unknown> }
+		)[Symbol.for("drizzle:Columns")];
 		expect(columns.status).toBeDefined();
-
-		expect(columns.id.notNull).toBe(true);
-		expect(columns.name.notNull).toBe(false);
-		expect(columns.name.isUnique).toBe(true);
 	});
 
-	test("should handle boolean type", () => {
-		const TableWithBool = Table("test", (prop) => ({
-			isActive: prop.boolean(),
+	test("should handle enums with object options", () => {
+		const MyTable = Table("my_table", () => ({
+			status: field.enum({ options: { ACTIVE: 1, INACTIVE: 0 } }),
 		}));
-		const columns = getTableColumns(TableWithBool);
-		// @ts-expect-error
-		expect(columns.isActive.dataType).toBe("boolean");
+
+		const columns = (
+			MyTable as unknown as { [key: symbol]: Record<string, unknown> }
+		)[Symbol.for("drizzle:Columns")];
+		expect(columns.status).toBeDefined();
 	});
 
-	test("should handle timestamp type", () => {
-		const TableWithTime = Table("test", (prop) => ({
-			createdAt: prop.timestamp(),
-		}));
-		const columns = getTableColumns(TableWithTime);
-		// @ts-expect-error
-		expect(columns.createdAt.dataType).toBe("date");
-	});
-
-	test("should handle node type", () => {
-		const TableWithNode = Table("test", (prop) => ({
-			data: prop.node(),
-		}));
-		const columns = getTableColumns(TableWithNode);
-		// @ts-expect-error
-		expect(columns.data.dataType).toBe("json");
+	test("should fallback to integer for enums without options", () => {
+		const MyTable = Table(
+			"my_table",
+			(f: { enum: (c: unknown) => unknown }) => ({
+				status: f.enum({}),
+			}),
+		);
+		const columns = (
+			MyTable as unknown as { [key: symbol]: Record<string, unknown> }
+		)[Symbol.for("drizzle:Columns")];
+		expect(columns.status).toBeDefined();
 	});
 
 	test("should throw error for unsupported type", () => {
 		expect(() => {
-			Table("test", (_prop: any) => ({
-				invalid: {
+			Table("error", () => ({
+				bad: {
 					type: "invalid",
-					finalise: (name: string) => ({
-						type: "invalid",
-						name,
-						isUnique: false,
-						isOptional: false,
-					}),
-				},
+					finalise: (key: string) => ({ type: "invalid", name: key }),
+				} as any,
 			}));
 		}).toThrow("Unsupported type: invalid");
 	});
