@@ -62,6 +62,18 @@ class Property<
 		return this.setOptions({ isUnique: true });
 	}
 
+	array(): Property<TypeName, JavaScriptType[], EnumOptionType> {
+		if (this.isArray) return this;
+		if (this.isIdentifier) {
+			throw new Error("Identifiers cannot be arrays.");
+		}
+		return this.setOptions({ isArray: true }) as Property<
+			TypeName,
+			JavaScriptType[],
+			EnumOptionType
+		>;
+	}
+
 	default(
 		value: JavaScriptType | SQL,
 	): Property<TypeName, JavaScriptType, EnumOptionType> {
@@ -75,6 +87,9 @@ class Property<
 		if (this.isIdentifier) return this as any;
 		if (this._type === "enum") {
 			throw new Error("Enums cannot be identifiers.");
+		}
+		if (this.isArray) {
+			throw new Error("Arrays cannot be identifiers.");
 		}
 		if (config?.autoIncrement && this._type !== "integer") {
 			throw new Error("autoIncrement can only be used with integer fields.");
@@ -117,6 +132,10 @@ class Property<
 		return !!this.options.isUnique;
 	}
 
+	get isArray(): boolean {
+		return !!this.options.isArray;
+	}
+
 	get isIdentifier(): boolean {
 		return !!this.options.isIdentifier;
 	}
@@ -141,6 +160,7 @@ class Property<
 		const name = this.name ?? "unnamed";
 		const optional = this.isOptional ? ".optional()" : "";
 		const unique = this.isUnique ? ".unique()" : "";
+		const array = this.isArray ? ".array()" : "";
 		const identifier = this.isIdentifier
 			? this.isAutoIncrement
 				? ".identifier({ autoIncrement: true })"
@@ -171,18 +191,18 @@ class Property<
 			if (options) {
 				if (Array.isArray(options)) {
 					const values = options.map((v) => `"${v}"`).join(", ");
-					return `enum("${name}",\n    {   options:\n\t\t\t[${values}]\n\t}\n   )${optional}${unique}${identifier}${references}${defaultVal}`;
+					return `enum("${name}",\n    {   options:\n\t\t\t[${values}]\n\t}\n   )${optional}${unique}${array}${identifier}${references}${defaultVal}`;
 				}
 				if (typeof options === "object") {
 					const values = Object.entries(options)
 						.map(([k, v]) => `\t\t\t\t${k}: ${v},`)
 						.join("\n");
-					return `enum("${name}",\n    {   options:\n\t\t\t{\n${values}\n\t\t\t}\n\t\t}\n   )${optional}${unique}${identifier}${references}${defaultVal}`;
+					return `enum("${name}",\n    {   options:\n\t\t\t{\n${values}\n\t\t\t}\n\t\t}\n   )${optional}${unique}${array}${identifier}${references}${defaultVal}`;
 				}
 			}
 		}
 
-		return `${this._type}("${name}")${optional}${unique}${identifier}${references}${defaultVal}`;
+		return `${this._type}("${name}")${optional}${unique}${array}${identifier}${references}${defaultVal}`;
 	}
 
 	toTypeScriptType(): string {
@@ -225,10 +245,17 @@ class Property<
 				} else {
 					typeStr = "string | number";
 				}
+				if (this.isArray) {
+					typeStr = `(${typeStr})`;
+				}
 				break;
 			}
 			default:
 				typeStr = "unknown";
+		}
+
+		if (this.isArray) {
+			typeStr = `${typeStr}[]`;
 		}
 
 		if (this.isOptional) {
@@ -252,6 +279,7 @@ type PropertyOptions<_JavaScriptType = unknown, EnumOptionType = unknown> = {
 	enumOptions?: EnumOptionType;
 	isOptional: boolean;
 	isUnique?: boolean;
+	isArray?: boolean;
 	isIdentifier?: boolean;
 	autoIncrement?: boolean;
 	defaultValue?: JavaScriptType | SQL;

@@ -37,6 +37,18 @@ describe("Property", () => {
 		expect(prop.isUnique).toBe(false); // Immutability
 	});
 
+	test("array should mark property as array", () => {
+		const prop = new Property("text");
+		const arrayProp = prop.array();
+		expect(arrayProp.isArray).toBe(true);
+		expect(prop.isArray).toBe(false); // Immutability
+	});
+
+	test("array should throw if property is identifier", () => {
+		const prop = new Property("integer").identifier();
+		expect(() => prop.array()).toThrow("Identifiers cannot be arrays.");
+	});
+
 	test("identifier should mark property as primary key", () => {
 		const prop = new Property("text");
 		const idProp = prop.identifier();
@@ -55,6 +67,13 @@ describe("Property", () => {
 		const prop = new Property("enum");
 		expect(() => (prop as any).identifier()).toThrow(
 			"Enums cannot be identifiers.",
+		);
+	});
+
+	test("identifier should throw for arrays", () => {
+		const prop = new Property("text").array();
+		expect(() => (prop as any).identifier()).toThrow(
+			"Arrays cannot be identifiers.",
 		);
 	});
 
@@ -89,6 +108,9 @@ describe("Property", () => {
 		expect(idProp.toString()).toBe(
 			'integer("id").identifier({ autoIncrement: true })',
 		);
+
+		const arrayProp = new Property("text").array().finalise("tags");
+		expect(arrayProp.toString()).toBe('text("tags").array()');
 
 		const bothProp = new Property("text").optional().unique().finalise("desc");
 		expect(bothProp.toString()).toBe('text("desc").optional().unique()');
@@ -142,9 +164,19 @@ describe("Property", () => {
 		);
 	});
 
+	test("toTypeScriptType for array types", () => {
+		expect(new Property("text").array().toTypeScriptType()).toBe("string[]");
+		expect(new Property("integer").array().toTypeScriptType()).toBe("bigint[]");
+	});
+
 	test("toTypeScriptType for enums", () => {
 		const prop = new Property("enum").enumOptions({ options: ["A", "B"] });
 		expect(prop.toTypeScriptType()).toBe('"A" | "B"');
+
+		const arrayEnum = new Property("enum")
+			.enumOptions({ options: ["A", "B"] })
+			.array();
+		expect(arrayEnum.toTypeScriptType()).toBe('("A" | "B")[]');
 
 		const propNoConfig = new Property("enum");
 		expect(propNoConfig.toTypeScriptType()).toBe("string | number");

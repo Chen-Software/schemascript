@@ -21,6 +21,7 @@ export const testTable = Table("test_modifiers", (prop) => ({
 	required_unique: prop.text().unique(),
 	optional_field: prop.text().optional(),
 	status: prop.integer().default(1),
+	tags: prop.text().array(),
 }));
 `;
 		generatedSql = await runMigrationTest(tempDir, schemaContent);
@@ -46,5 +47,6 @@ export const testTable = Table("test_modifiers", (prop) => ({
 			"FOREIGN KEY (`parent_id`) REFERENCES `parent`(`id`) ON UPDATE no action ON DELETE cascade",
 		);
 		expect(generatedSql).toContain("`status` integer DEFAULT 1 NOT NULL");
+		expect(generatedSql).toContain("`tags` blob NOT NULL");
 	});
 });
