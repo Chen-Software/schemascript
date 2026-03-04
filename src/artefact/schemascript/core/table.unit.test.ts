@@ -6,7 +6,7 @@ describe("Table", () => {
 	test("should create a Drizzle table with correct columns", () => {
 		const UserTable = Table("users", (prop) => ({
 			id: prop.integer(),
-			name: prop.text().unique(),
+			name: prop.text().unique().optional(),
 			status: prop.enum({ options: ["active", "inactive"] }),
 		}));
 
@@ -17,7 +17,7 @@ describe("Table", () => {
 		expect(columns.status).toBeDefined();
 
 		expect(columns.id.notNull).toBe(true);
-		expect(columns.name.notNull).toBe(true);
+		expect(columns.name.notNull).toBe(false);
 		expect(columns.name.isUnique).toBe(true);
 	});
 
@@ -58,6 +58,7 @@ describe("Table", () => {
 						type: "invalid",
 						name,
 						isUnique: false,
+						isOptional: false,
 					}),
 				},
 			}));
