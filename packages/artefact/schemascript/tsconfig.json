@@ -6,7 +6,7 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "outDir": "./dist",
-    "rootDir": "../../",
+    "rootDir": "../../../",
     "strict": true,
     "baseUrl": ".",
     "paths": {

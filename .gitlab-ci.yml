@@ -8,6 +8,7 @@ image: oven/bun:latest
 # Use a default before_script to keep things DRY
 default:
   before_script:
+    - apt-get update -qy && apt-get install -y git
     - bun install --frozen-lockfile
 
 # Cache node_modules to speed up builds
@@ -34,14 +35,14 @@ build:
   artifacts:
     paths:
       - dist/
-      - src/artefact/schemascript/dist/
+      - packages/artefact/schemascript/dist/
       - drizzle/
     expire_in: 1 week
 
 publish_schemascript:
   stage: publish
   script:
-    - cd src/artefact/schemascript
+    - cd packages/artefact/schemascript
     - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
     - bun publish --access public
   only:

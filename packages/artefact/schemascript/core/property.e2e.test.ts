@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";
-import { runMigrationTest } from "../../../utils/testing/sql";
+import { runMigrationTest } from "@/utils/testing/sql";
 
 describe("Modifiers E2E (SQL Generation)", () => {
 	const tempDir = path.join(process.cwd(), "temp-e2e-modifiers");
@@ -9,7 +9,7 @@ describe("Modifiers E2E (SQL Generation)", () => {
 	let cleanupFn: () => Promise<void>;
 
 	beforeEach(async () => {
-		const libraryPath = path.join(process.cwd(), "src/artefact/schemascript/index.ts");
+		const libraryPath = path.join(process.cwd(), "packages/artefact/schemascript/index.ts");
 		const schemaContent = `
 import { field, Table } from "${libraryPath}";
 

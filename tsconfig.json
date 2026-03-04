@@ -19,7 +19,8 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["src/*"],
-			"@artefact/*": ["src/artefact/*"]
+			"@artefact/schemascript": ["packages/artefact/schemascript/index.ts"],
+			"@artefact/schemascript/*": ["packages/artefact/schemascript/*"]
 		},
 
 		// Best practices

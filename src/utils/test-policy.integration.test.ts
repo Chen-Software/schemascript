@@ -17,7 +17,6 @@ describe("Test Policy Enforcement", () => {
 		"data/proxies",
 		"scripts",
 		"utils/testing",
-		"artefact/schemascript/dist",
 	];
 
 	async function getFiles(dir: string): Promise<string[]> {
@@ -42,7 +41,8 @@ describe("Test Policy Enforcement", () => {
 				(ext === ".ts" || ext === ".tsx") &&
 				!file.endsWith(".test.ts") &&
 				!excludedFiles.includes(base) &&
-				!excludedDirs.some((dir) => relativePath.startsWith(dir))
+				!excludedDirs.some((dir) => relativePath.startsWith(dir)) &&
+				!file.includes("/dist/")
 			);
 		});
 
