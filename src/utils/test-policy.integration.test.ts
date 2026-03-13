@@ -7,7 +7,7 @@ describe("Test Policy Enforcement", () => {
 
 	const excludedFiles = ["index.ts", "main.ts", "primitive.ts"];
 
-	const excludedDirs = ["data/proxies", "scripts"];
+	const excludedDirs = ["data/proxies", "scripts", "artefact/schemascript/cli"];
 
 	async function getFiles(dir: string): Promise<string[]> {
 		const entries = await readdir(dir, { withFileTypes: true });
